@@ -1,6 +1,7 @@
 enum QueryKeys {
   LANGUAGES = 'languages',
-  SNIPPETS = 'snippets'
+  SNIPPETS = 'snippets',
+  USER = 'user'
 }
 
 export default QueryKeys;

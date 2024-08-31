@@ -1,17 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import axios from "axios";
-import Cookies from "js-cookie";
+import { CookeStorageKey, cookieStorage } from "./BrowserStorage";
 
-enum CookieKeys {
-  CSRF_TOKEN = "csrftoken",
-}
 
 class Request {
   private static async setCSRFToken() {
-    if (!Cookies.get(CookieKeys.CSRF_TOKEN)) {
+    if (!cookieStorage.get(CookeStorageKey.CSRF_TOKEN)) {
       try {
         const res = await axios.get(`${import.meta.env.VITE_BASE_URL}csrf/get`);
-        Cookies.set(CookieKeys.CSRF_TOKEN, res.data.token);
+        cookieStorage.set(CookeStorageKey.CSRF_TOKEN, res.data.token);
       } catch (err) {
         console.error(`Failed to set CSRF token. `, err);
       }
@@ -19,9 +16,13 @@ class Request {
   }
 
   static async get<T>(url: string): Promise<T> {
-    await this.setCSRFToken();
+    const token = cookieStorage.get(CookeStorageKey.BEARER_TOKEN);
     try {
-      const res = await axios.get(url);
+      const res = await axios.get(url, {
+        headers: {
+          ...(token && { Authorization: `Token ${token}` }),
+        },
+      });
       return res.data;
     } catch (err) {
       throw new Error(`${err}`);
@@ -30,9 +31,13 @@ class Request {
 
   static async post<T>(url: string, data: T) {
     await this.setCSRFToken();
+    const token = cookieStorage.get(CookeStorageKey.BEARER_TOKEN);
     try {
       const res = await axios.post(url, data, {
-        headers: { "X-CSRFToken": Cookies.get(CookieKeys.CSRF_TOKEN) },
+        headers: {
+          "X-CSRFToken": cookieStorage.get(CookeStorageKey.CSRF_TOKEN),
+          ...(token && { Authorization: `Token ${token}` }),
+        },
         withCredentials: true,
       });
       return res.data;

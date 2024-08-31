@@ -10,10 +10,10 @@ import {
   TextField,
 } from "@mui/material";
 import UIWCodeEditor from "@uiw/react-textarea-code-editor";
-import languages from "../types/language";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Request from "../utils/Request";
 import QueryKeys from "../types/QueryKeys";
+import languages from "../types/const";
 
 interface Props {
   open: boolean;

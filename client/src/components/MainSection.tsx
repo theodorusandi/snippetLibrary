@@ -29,7 +29,7 @@ interface Props {
 }
 
 const getSnippets = (language: string, query?: string) =>
-  Request.get<Snippet[]>(
+  Request.get<{ snippets: Snippet[] }>(
     `${import.meta.env.VITE_BASE_URL}snippets/${language}/get${
       query && `?query=${query}`
     }`
@@ -43,7 +43,7 @@ const MainSection = ({ language, query }: Props) => {
     queryFn: () => getSnippets(language, query),
     enabled: Boolean(language),
   });
-
+  
   const deleteSnippetMutation = useMutation<
     undefined,
     undefined,
@@ -77,7 +77,7 @@ const MainSection = ({ language, query }: Props) => {
       sx={{ flexGrow: 1, bgcolor: "background.default", p: 3 }}
     >
       <Toolbar />
-      {data?.map((snippet) => (
+      {data?.snippets.map((snippet) => (
         <Card variant='outlined' sx={{ marginBottom: 2 }}>
           <CardActions sx={{ display: "flex", justifyContent: "flex-end" }}>
             <Button

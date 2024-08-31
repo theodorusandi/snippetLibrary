@@ -1,34 +1,69 @@
-import json
 
 from django.http import JsonResponse, HttpResponse
 from django.middleware.csrf import get_token
 
-from main.models import Snippet
+from rest_framework.parsers import JSONParser
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
 
+from main.models import Snippet
+from main.serializers import SnippetSerializer, UserSerializer
+
+@api_view(["GET"])
 def get_csrf(request):
   return JsonResponse({'token': get_token(request)})
 
+@api_view(["GET"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def get(request, language):
   query = request.GET.get('query', '')
-  snippets = Snippet.objects.filter(language=language)
+  snippets = Snippet.objects.filter(language=language, user=request.user)
   if query:
-    snippets = snippets.filter(description__contains=query)
-  snippets = list(snippets.values().order_by('-updated_at'))
-  return JsonResponse(snippets, safe=False)
+    snippets = snippets.filter(description__icontains=query).order_by('-updated_at')
+  serializer = SnippetSerializer(snippets, many=True)
+  return JsonResponse({'snippets': serializer.data}, safe=False)
 
+@api_view(["POST"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def add(request):
-  if request.method == 'POST':
-    data = json.loads(request.body)
-    new_snippet = Snippet(language=data['language'], code=data['code'], description=data['description'])
-    new_snippet.save()
-    return HttpResponse(status=200)
+  try:
+    data = JSONParser().parse(request)
+    serializer = SnippetSerializer(data=data)
+    if serializer.is_valid():
+      serializer.save(user=request.user)
+      return JsonResponse({'id': serializer.data["id"]}, status=201)
+  except Exception as e:
+    return JsonResponse({'error': str(e)}, status=400)
 
+@api_view(["POST"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def delete(request):
-  if request.method == 'POST':
-    data = json.loads(request.body)
-    Snippet.objects.filter(id=data['id']).delete()
-    return HttpResponse(status=200)
+  try:
+    data = JSONParser().parse(request)
+    snippet = Snippet.objects.get(id=data['id'], user=request.user)
+    snippet.delete()
+    return HttpResponse(status=204)
+  except Exception as e:
+    return JsonResponse({'error': str(e)}, status=400)
   
+@api_view(["GET"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def get_languages(request):
-  languages = list(Snippet.objects.values_list('language', flat=True).distinct().order_by('language'))
+  languages = list(Snippet.objects.filter(user=request.user).values_list('language', flat=True).distinct().order_by('language'))
   return JsonResponse({'languages': languages})
+
+@api_view(["POST"])
+def signup(request):
+  try:
+    data = JSONParser().parse(request)
+    serializer = UserSerializer(data=data)
+    if serializer.is_valid():
+      serializer.save()
+      return HttpResponse(status=201)
+  except Exception as e:
+    return JsonResponse({'error': str(e)}, status=400)

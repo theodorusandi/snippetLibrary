@@ -1,36 +1,30 @@
-import { Box, CssBaseline } from "@mui/material";
-import Navbar from "./components/Navbar";
-import Sidebar from "./components/Sidebar";
-import MainSection from "./components/MainSection";
-import { useState } from "react";
-import AddSnippetDialog from "./components/AddSnippetDialog";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { AuthProvider } from "./components/hooks/useAuth";
+import SignInPage from "./components/SignInPage";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import Dashboard from "./components/Dashboard";
 
-const App = () => {
-  const [language, setLanguage] = useState<string>("");
-  const [query, setQuery] = useState<string>("");
-  const [addSnippetDialogOpen, setAddSnippetDialogOpen] =
-    useState<boolean>(false);
+const queryClient = new QueryClient();
 
-  return (
-    <Box sx={{ display: "flex" }}>
-      <CssBaseline />
-      <Navbar
-        onAddNew={() => setAddSnippetDialogOpen(true)}
-        onQueryChange={setQuery}
-      />
-      <Sidebar setLanguage={setLanguage} language={language} />
-      <MainSection language={language} query={query} />
-      <AddSnippetDialog
-        open={addSnippetDialogOpen}
-        onClose={(language) => {
-          setAddSnippetDialogOpen(false);
-          if (language) {
-            setLanguage(language);
-          }
-        }}
-      />
-    </Box>
-  );
-};
+const App = () => (
+  <BrowserRouter>
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <Routes>
+          <Route path="/signin" element={<SignInPage />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </QueryClientProvider>
+    </AuthProvider>
+  </BrowserRouter>
+);
 
 export default App;
